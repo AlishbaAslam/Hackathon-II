@@ -44,7 +44,7 @@ Located in `phase-II-full-stack-todo/`.
 #### Frontend (Next.js)
 
 - Next.js 16 **App Router** + React + TypeScript
-- Tailwind CSS responsive UI (target: 320px–1920px)
+- Tailwind CSS responsive UI
 - Authentication UI (login/signup) and auth state management
 - Task CRUD UI with loading/empty/error states
 - Centralized API client that attaches JWT bearer tokens
@@ -72,7 +72,7 @@ Top-level:
 │   └── frontend/              # Next.js 16 UI
 ├── specs/                     # Specifications (backend + UI, plus history)
 ├── history/                   # Prompt History Records (PHR)
-├── console/README.md          # Phase I usage details
+├── README.md          # Phase I and Phase II usage details
 ├── CLAUDE.md                  # Claude Code repo instructions
 └── .specify/memory/constitution.md  # Project constitution (governance)
 ```
@@ -105,6 +105,7 @@ phase-II-full-stack-todo/
 │   │   └── services/            # business logic
 │   ├── tests/
 │   ├── pyproject.toml
+|   ├── CLAUDE.md                  # Claude Code repo instructions
 │   └── README.md
 └── frontend/
     ├── app/                     # Next.js App Router pages/layouts
@@ -114,6 +115,7 @@ phase-II-full-stack-todo/
     ├── lib/                     # Central API client + shared types
     ├── services/
     ├── package.json
+    ├── CLAUDE.md                  # Claude Code repo instructions
     └── README.md
 ```
 
@@ -126,9 +128,6 @@ phase-II-full-stack-todo/
 - **Phase I**: Python 3.13+ and `uv`
 - **Phase II backend**: Python 3.12+ (per `phase-II-full-stack-todo/backend/pyproject.toml`) and `uv`
 - **Phase II frontend**: Node.js + npm
-- Optional for Phase II: PostgreSQL (or Neon); backend defaults to SQLite if not configured
-
-> Note: the repository uses separate `pyproject.toml` / dependency graphs for Phase I vs Phase II.
 
 ---
 
@@ -155,8 +154,6 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ### Backend configuration (env vars)
 
 The backend loads environment variables from a local `.env` file (if present). Defaults exist, but for JWT auth you should set a strong secret.
-
-Common variables (see `phase-II-full-stack-todo/backend/src/config.py`):
 
 Backend URLs:
 
