@@ -1,13 +1,16 @@
 import { LoginFormValues, SignupFormValues } from '../lib/types';
 import { authClient } from '../lib/auth';
 
+type GetSessionResult = Awaited<ReturnType<typeof authClient.getSession>>;
+type SessionData = GetSessionResult['data'];
+
 // Authentication service for handling user authentication with Better Auth
 class AuthService {
   // Login method
   async login(credentials: LoginFormValues) {
     try {
       const response = await authClient.signIn.email({
-        email: credentials.email,
+        email: credentials.email.trim(),
         password: credentials.password,
         callbackURL: '/dashboard', // Redirect after successful login
       });
@@ -21,9 +24,9 @@ class AuthService {
   async signup(userData: SignupFormValues) {
     try {
       const response = await authClient.signUp.email({
-        email: userData.email,
+        email: userData.email.trim(),
         password: userData.password,
-        name: userData.name,
+        name: (userData.name ?? '').trim() || 'User',
         callbackURL: '/dashboard', // Redirect after successful signup
       });
       return response;
@@ -43,10 +46,10 @@ class AuthService {
   }
 
   // Get current session
-  async getSession() {
+  async getSession(): Promise<SessionData> {
     try {
-      const session = await authClient.getSession();
-      return session;
+      const result = await authClient.getSession();
+      return result.data;
     } catch (error) {
       console.error('Get session error:', error);
       return null;
@@ -61,12 +64,9 @@ class AuthService {
   // Get current token
   async getToken(): Promise<string | null> {
     try {
-      const session = await authClient.getSession();
-      if (session?.session) {
-        // Better Auth provides JWT token through session
-        return session.session.token;
-      }
-      return null;
+      const session = await this.getSession();
+      const token = session?.session?.token;
+      return token ?? null;
     } catch (error) {
       console.error('Get token error:', error);
       return null;
@@ -76,7 +76,7 @@ class AuthService {
   // Check if user is authenticated
   async isAuthenticated(): Promise<boolean> {
     const session = await this.getSession();
-    return session !== null && session.session !== null;
+    return session?.session != null;
   }
 
   // Initialize auth state from stored data
@@ -88,11 +88,9 @@ class AuthService {
   // Refresh token if needed
   async refreshToken(): Promise<string | null> {
     try {
-      const session = await authClient.getSession();
-      if (session?.session) {
-        return session.session.token;
-      }
-      return null;
+      const session = await this.getSession();
+      const token = session?.session?.token;
+      return token ?? null;
     } catch (error) {
       console.error('Refresh token error:', error);
       return null;
