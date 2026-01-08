@@ -7,4 +7,15 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Required
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      # Optional (defaults match backend README)
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      DEBUG: ${DEBUG:-false}
     restart: unless-stopped
+
+
