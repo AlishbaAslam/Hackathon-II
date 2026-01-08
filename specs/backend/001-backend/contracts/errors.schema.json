@@ -1,0 +1,340 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://api.example.com/schemas/errors.json",
+  "title": "Error Response Schemas",
+  "description": "Standardized error response formats for Todo Backend API (FR-022, FR-023)",
+  "definitions": {
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["detail", "status_code"],
+      "properties": {
+        "detail": {
+          "type": "string",
+          "description": "Human-readable error message suitable for display to users",
+          "examples": [
+            "Email already exists",
+            "Invalid email or password",
+            "Not authorized to access this task",
+            "Task not found"
+          ]
+        },
+        "status_code": {
+          "type": "integer",
+          "description": "HTTP status code matching the response status",
+          "enum": [400, 401, 403, 404, 409, 422, 500, 503],
+          "examples": [401, 403, 404, 409]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "detail": "Email already exists",
+          "status_code": 409
+        },
+        {
+          "detail": "Invalid email or password",
+          "status_code": 401
+        },
+        {
+          "detail": "Not authorized to access this task",
+          "status_code": 403
+        },
+        {
+          "detail": "Task not found",
+          "status_code": 404
+        }
+      ]
+    },
+    "ValidationErrorResponse": {
+      "type": "object",
+      "required": ["detail", "status_code"],
+      "properties": {
+        "detail": {
+          "type": "array",
+          "description": "Array of validation errors with location, message, and type",
+          "items": {
+            "$ref": "#/definitions/ValidationErrorItem"
+          },
+          "minItems": 1
+        },
+        "status_code": {
+          "type": "integer",
+          "description": "HTTP status code (always 422 for validation errors)",
+          "const": 422
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "detail": [
+            {
+              "loc": ["body", "email"],
+              "msg": "Invalid email format",
+              "type": "value_error.email"
+            }
+          ],
+          "status_code": 422
+        },
+        {
+          "detail": [
+            {
+              "loc": ["body", "title"],
+              "msg": "Title cannot be empty",
+              "type": "value_error.str.min_length"
+            }
+          ],
+          "status_code": 422
+        }
+      ]
+    },
+    "ValidationErrorItem": {
+      "type": "object",
+      "required": ["loc", "msg", "type"],
+      "properties": {
+        "loc": {
+          "type": "array",
+          "description": "Location of the validation error in the request (e.g., ['body', 'email'])",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [
+            ["body", "email"],
+            ["body", "title"],
+            ["body", "password"],
+            ["query", "limit"]
+          ]
+        },
+        "msg": {
+          "type": "string",
+          "description": "Human-readable error message describing the validation failure",
+          "examples": [
+            "Invalid email format",
+            "Title cannot be empty",
+            "Password must be at least 8 characters",
+            "Title must be 200 characters or less"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "description": "Error type identifier (Pydantic error type)",
+          "examples": [
+            "value_error.email",
+            "value_error.str.min_length",
+            "value_error.str.max_length",
+            "value_error.missing"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "errorScenarios": {
+    "authentication": {
+      "401_no_token": {
+        "description": "No Authorization header provided",
+        "response": {
+          "detail": "Not authenticated",
+          "status_code": 401
+        }
+      },
+      "401_invalid_token": {
+        "description": "Invalid or expired JWT token",
+        "response": {
+          "detail": "Invalid authentication credentials",
+          "status_code": 401
+        }
+      },
+      "401_invalid_credentials": {
+        "description": "Wrong email or password during login",
+        "response": {
+          "detail": "Invalid email or password",
+          "status_code": 401
+        }
+      }
+    },
+    "authorization": {
+      "403_not_owner": {
+        "description": "User attempting to access task owned by another user (FR-016)",
+        "response": {
+          "detail": "Not authorized to access this task",
+          "status_code": 403
+        }
+      }
+    },
+    "resource_not_found": {
+      "404_task_not_found": {
+        "description": "Task ID does not exist (FR-017)",
+        "response": {
+          "detail": "Task not found",
+          "status_code": 404
+        }
+      },
+      "404_user_not_found": {
+        "description": "User ID does not exist (internal use)",
+        "response": {
+          "detail": "User not found",
+          "status_code": 404
+        }
+      }
+    },
+    "resource_conflict": {
+      "409_email_exists": {
+        "description": "Email already registered during signup (FR-002)",
+        "response": {
+          "detail": "Email already exists",
+          "status_code": 409
+        }
+      }
+    },
+    "validation_errors": {
+      "422_empty_title": {
+        "description": "Task title is empty (FR-008)",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "title"],
+              "msg": "Title cannot be empty",
+              "type": "value_error.str.min_length"
+            }
+          ],
+          "status_code": 422
+        }
+      },
+      "422_title_too_long": {
+        "description": "Task title exceeds 200 characters (edge case)",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "title"],
+              "msg": "Title must be 200 characters or less",
+              "type": "value_error.str.max_length"
+            }
+          ],
+          "status_code": 422
+        }
+      },
+      "422_description_too_long": {
+        "description": "Task description exceeds 2000 characters (edge case)",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "description"],
+              "msg": "Description must be 2000 characters or less",
+              "type": "value_error.str.max_length"
+            }
+          ],
+          "status_code": 422
+        }
+      },
+      "422_invalid_email": {
+        "description": "Invalid email format during signup",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "email"],
+              "msg": "Invalid email format",
+              "type": "value_error.email"
+            }
+          ],
+          "status_code": 422
+        }
+      },
+      "422_short_password": {
+        "description": "Password less than 8 characters",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "password"],
+              "msg": "Password must be at least 8 characters",
+              "type": "value_error.str.min_length"
+            }
+          ],
+          "status_code": 422
+        }
+      },
+      "422_missing_field": {
+        "description": "Required field missing from request",
+        "response": {
+          "detail": [
+            {
+              "loc": ["body", "title"],
+              "msg": "Field required",
+              "type": "value_error.missing"
+            }
+          ],
+          "status_code": 422
+        }
+      }
+    },
+    "server_errors": {
+      "500_internal_error": {
+        "description": "Unexpected internal server error (edge case, no stack trace to client)",
+        "response": {
+          "detail": "Internal server error",
+          "status_code": 500
+        }
+      },
+      "503_database_unavailable": {
+        "description": "Database connection lost (edge case)",
+        "response": {
+          "detail": "Service temporarily unavailable",
+          "status_code": 503
+        }
+      }
+    }
+  },
+  "edgeCases": {
+    "malformed_token": {
+      "description": "JWT token is not properly formatted (edge case from spec)",
+      "response": {
+        "detail": "Invalid token format",
+        "status_code": 401
+      }
+    },
+    "expired_token": {
+      "description": "JWT token has expired (edge case from spec, 30 minute expiry)",
+      "response": {
+        "detail": "Token has expired",
+        "status_code": 401
+      }
+    },
+    "unicode_in_fields": {
+      "description": "Special characters and emojis in title/description (edge case from spec, should succeed)",
+      "note": "UTF-8 support is built-in, no special error handling needed. Example: '🎉 Celebrate launch! 日本語'",
+      "response": "No error - accepted and stored correctly"
+    },
+    "pagination_beyond_total": {
+      "description": "Offset exceeds total task count (edge case from spec, SC-008)",
+      "note": "Returns empty array with correct pagination metadata",
+      "response": {
+        "tasks": [],
+        "total": 50,
+        "limit": 10,
+        "offset": 1000
+      }
+    },
+    "concurrent_update": {
+      "description": "Two requests update same task simultaneously (edge case from spec)",
+      "note": "Last write wins, updated_at reflects final modification. No error returned.",
+      "response": "No error - PostgreSQL handles with MVCC, last transaction commits"
+    }
+  },
+  "implementationNotes": {
+    "consistency": "All error responses MUST follow ErrorResponse or ValidationErrorResponse schema (FR-022)",
+    "security": "Never expose stack traces, internal paths, or sensitive data in error messages to clients",
+    "logging": "Log full error details server-side for debugging while returning safe messages to client",
+    "statusCodes": {
+      "400": "Bad Request - Malformed request syntax (rarely used, prefer 422)",
+      "401": "Unauthorized - Authentication failed or token missing/invalid",
+      "403": "Forbidden - Authenticated but not authorized (wrong user)",
+      "404": "Not Found - Resource does not exist (FR-017)",
+      "409": "Conflict - Resource conflict (e.g., email exists, FR-002)",
+      "422": "Unprocessable Entity - Validation failed (FR-023)",
+      "500": "Internal Server Error - Unexpected server error",
+      "503": "Service Unavailable - Database or service temporarily down"
+    },
+    "pydanticIntegration": "FastAPI automatically generates ValidationErrorResponse from Pydantic validation failures",
+    "customExceptions": "Define custom exception classes (UnauthorizedException, ForbiddenException, etc.) and register exception handlers"
+  }
+}

@@ -1,0 +1,18 @@
+[project]
+name = "todo-console-app"
+version = "0.1.0"
+description = "A simple in-memory todo console application"
+requires-python = ">=3.13"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Todo App Developer"}]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

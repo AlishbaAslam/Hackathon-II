@@ -1,0 +1,304 @@
+openapi: 3.0.3
+info:
+  title: Todo Backend API - Authentication
+  description: Authentication endpoints for user signup and login with JWT token generation
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server (future)
+
+tags:
+  - name: Authentication
+    description: User registration and login operations
+
+paths:
+  /api/auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user account
+      description: |
+        Creates a new user account with email and password. Email must be unique across all users.
+        Password will be cryptographically hashed before storage using bcrypt.
+
+        **Functional Requirements**: FR-001, FR-002, FR-003
+        **User Story**: User Story 1 (Priority P1)
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+            examples:
+              valid_signup:
+                summary: Valid signup request
+                value:
+                  email: "user@example.com"
+                  password: "SecurePass123!"
+                  name: "John Doe"
+      responses:
+        '201':
+          description: User account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                success:
+                  summary: Successful signup
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    email: "user@example.com"
+                    name: "John Doe"
+                    created_at: "2026-01-06T10:30:00Z"
+        '409':
+          description: Conflict - Email already exists (FR-002)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                email_exists:
+                  summary: Email already registered
+                  value:
+                    detail: "Email already exists"
+                    status_code: 409
+        '422':
+          description: Validation error - Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                invalid_email:
+                  summary: Invalid email format
+                  value:
+                    detail:
+                      - loc: ["body", "email"]
+                        msg: "Invalid email format"
+                        type: "value_error.email"
+                    status_code: 422
+                short_password:
+                  summary: Password too short
+                  value:
+                    detail:
+                      - loc: ["body", "password"]
+                        msg: "Password must be at least 8 characters"
+                        type: "value_error.min_length"
+                    status_code: 422
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with email and password
+      description: |
+        Authenticates user with email and password credentials. Returns JWT access token upon successful authentication.
+        Token should be included in Authorization header for all protected endpoints.
+
+        **Functional Requirements**: FR-004, FR-005
+        **User Story**: User Story 1 (Priority P1)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              valid_login:
+                summary: Valid login request
+                value:
+                  email: "user@example.com"
+                  password: "SecurePass123!"
+      responses:
+        '200':
+          description: Login successful, JWT token returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              examples:
+                success:
+                  summary: Successful login
+                  value:
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJleHAiOjE3MDQ1NDAwMDB9.signature"
+                    token_type: "bearer"
+                    user:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      email: "user@example.com"
+                      name: "John Doe"
+        '401':
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_credentials:
+                  summary: Wrong email or password
+                  value:
+                    detail: "Invalid email or password"
+                    status_code: 401
+        '422':
+          description: Validation error - Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+components:
+  schemas:
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: User email address (must be unique)
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+          description: User password (will be hashed, min 8 characters)
+          example: "SecurePass123!"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: User display name
+          example: "John Doe"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          description: User password
+          example: "SecurePass123!"
+
+    UserResponse:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "user@example.com"
+        name:
+          type: string
+          description: User display name
+          example: "John Doe"
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp (UTC)
+          example: "2026-01-06T10:30:00Z"
+
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - user
+      properties:
+        access_token:
+          type: string
+          description: JWT access token (valid for 30 minutes)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          enum: [bearer]
+          description: Token type (always "bearer")
+          example: "bearer"
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+        - status_code
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: "Email already exists"
+        status_code:
+          type: integer
+          description: HTTP status code
+          example: 409
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - detail
+        - status_code
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+                description: Location of the error in the request
+                example: ["body", "email"]
+              msg:
+                type: string
+                description: Error message
+                example: "Invalid email format"
+              type:
+                type: string
+                description: Error type
+                example: "value_error.email"
+        status_code:
+          type: integer
+          description: HTTP status code (always 422 for validation errors)
+          example: 422
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /api/auth/login endpoint.
+        Include in Authorization header as: Authorization: Bearer <token>
+
+security: []  # Authentication endpoints don't require auth

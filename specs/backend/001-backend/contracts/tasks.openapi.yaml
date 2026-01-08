@@ -1,0 +1,615 @@
+openapi: 3.0.3
+info:
+  title: Todo Backend API - Tasks
+  description: Task CRUD endpoints with user isolation and pagination support
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server (future)
+
+tags:
+  - name: Tasks
+    description: Task management operations (requires authentication)
+
+paths:
+  /api/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: List all tasks for authenticated user
+      description: |
+        Returns paginated list of tasks owned by the authenticated user. Tasks are sorted by creation date (newest first).
+        Supports limit-offset pagination.
+
+        **Functional Requirements**: FR-009, FR-010
+        **User Story**: User Story 2 (Priority P1)
+        **Success Criteria**: SC-002, SC-003, SC-008
+      operationId: listTasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of tasks to return (default 50, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 20
+        - name: offset
+          in: query
+          description: Number of tasks to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+              examples:
+                with_tasks:
+                  summary: User with tasks
+                  value:
+                    tasks:
+                      - id: "650e8400-e29b-41d4-a716-446655440001"
+                        title: "Buy groceries"
+                        description: "Milk, eggs, bread"
+                        is_completed: false
+                        user_id: "550e8400-e29b-41d4-a716-446655440000"
+                        created_at: "2026-01-06T10:30:00Z"
+                        updated_at: "2026-01-06T10:30:00Z"
+                      - id: "650e8400-e29b-41d4-a716-446655440002"
+                        title: "Finish project report"
+                        description: null
+                        is_completed: true
+                        user_id: "550e8400-e29b-41d4-a716-446655440000"
+                        created_at: "2026-01-05T15:20:00Z"
+                        updated_at: "2026-01-06T09:00:00Z"
+                    total: 2
+                    limit: 50
+                    offset: 0
+                empty_list:
+                  summary: User with no tasks
+                  value:
+                    tasks: []
+                    total: 0
+                    limit: 50
+                    offset: 0
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_token:
+                  summary: No authorization header
+                  value:
+                    detail: "Not authenticated"
+                    status_code: 401
+                invalid_token:
+                  summary: Invalid or expired token
+                  value:
+                    detail: "Invalid authentication credentials"
+                    status_code: 401
+
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: |
+        Creates a new task owned by the authenticated user. Title is required, description is optional.
+
+        **Functional Requirements**: FR-007, FR-008
+        **User Story**: User Story 2 (Priority P1)
+        **Success Criteria**: SC-002
+      operationId: createTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+            examples:
+              with_description:
+                summary: Task with description
+                value:
+                  title: "Buy groceries"
+                  description: "Milk, eggs, bread"
+              without_description:
+                summary: Task without description
+                value:
+                  title: "Call dentist"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                success:
+                  summary: Created task
+                  value:
+                    id: "650e8400-e29b-41d4-a716-446655440001"
+                    title: "Buy groceries"
+                    description: "Milk, eggs, bread"
+                    is_completed: false
+                    user_id: "550e8400-e29b-41d4-a716-446655440000"
+                    created_at: "2026-01-06T10:30:00Z"
+                    updated_at: "2026-01-06T10:30:00Z"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error - Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                empty_title:
+                  summary: Empty title
+                  value:
+                    detail:
+                      - loc: ["body", "title"]
+                        msg: "Title cannot be empty"
+                        type: "value_error.str.min_length"
+                    status_code: 422
+                title_too_long:
+                  summary: Title exceeds max length
+                  value:
+                    detail:
+                      - loc: ["body", "title"]
+                        msg: "Title must be 200 characters or less"
+                        type: "value_error.str.max_length"
+                    status_code: 422
+
+  /api/tasks/{task_id}:
+    get:
+      tags:
+        - Tasks
+      summary: Get a specific task by ID
+      description: |
+        Retrieves a single task by ID. User must be the owner of the task.
+
+        **Functional Requirements**: FR-011, FR-015, FR-016, FR-017
+        **User Story**: User Story 2 (Priority P1)
+      operationId: getTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440001"
+      responses:
+        '200':
+          description: Task retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User does not own this task (FR-016)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_owner:
+                  summary: Accessing another user's task
+                  value:
+                    detail: "Not authorized to access this task"
+                    status_code: 403
+        '404':
+          description: Not Found - Task does not exist (FR-017)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  summary: Task ID does not exist
+                  value:
+                    detail: "Task not found"
+                    status_code: 404
+
+    put:
+      tags:
+        - Tasks
+      summary: Update a task's title and description
+      description: |
+        Updates title and/or description of an existing task. User must be the owner.
+        Updated timestamp is automatically refreshed.
+
+        **Functional Requirements**: FR-012, FR-015, FR-016, FR-017, FR-019
+        **User Story**: User Story 3 (Priority P2)
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+            examples:
+              update_both:
+                summary: Update title and description
+                value:
+                  title: "Buy groceries (updated)"
+                  description: "Milk, eggs, bread, butter"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                success:
+                  summary: Updated task
+                  value:
+                    id: "650e8400-e29b-41d4-a716-446655440001"
+                    title: "Buy groceries (updated)"
+                    description: "Milk, eggs, bread, butter"
+                    is_completed: false
+                    user_id: "550e8400-e29b-41d4-a716-446655440000"
+                    created_at: "2026-01-06T10:30:00Z"
+                    updated_at: "2026-01-06T11:45:00Z"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User does not own this task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found - Task does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error - Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete a task permanently
+      description: |
+        Permanently removes a task from the database. User must be the owner. This action cannot be undone.
+
+        **Functional Requirements**: FR-014, FR-015, FR-016, FR-017
+        **User Story**: User Story 4 (Priority P2)
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440001"
+      responses:
+        '204':
+          description: Task deleted successfully (no content)
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User does not own this task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found - Task does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tasks/{task_id}/complete:
+    patch:
+      tags:
+        - Tasks
+      summary: Toggle task completion status
+      description: |
+        Marks a task as complete or incomplete. User must be the owner.
+        Updated timestamp is automatically refreshed.
+
+        **Functional Requirements**: FR-013, FR-015, FR-016, FR-017, FR-019
+        **User Story**: User Story 3 (Priority P2)
+      operationId: toggleTaskCompletion
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "650e8400-e29b-41d4-a716-446655440001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletionRequest'
+            examples:
+              mark_complete:
+                summary: Mark task as complete
+                value:
+                  is_completed: true
+              mark_incomplete:
+                summary: Mark task as incomplete
+                value:
+                  is_completed: false
+      responses:
+        '200':
+          description: Task completion status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                completed:
+                  summary: Task marked complete
+                  value:
+                    id: "650e8400-e29b-41d4-a716-446655440001"
+                    title: "Buy groceries"
+                    description: "Milk, eggs, bread"
+                    is_completed: true
+                    user_id: "550e8400-e29b-41d4-a716-446655440000"
+                    created_at: "2026-01-06T10:30:00Z"
+                    updated_at: "2026-01-06T14:20:00Z"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - User does not own this task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found - Task does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    TaskCreateRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (required, max 200 characters)
+          example: "Buy groceries"
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Optional task description (max 2000 characters)
+          example: "Milk, eggs, bread"
+
+    TaskUpdateRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (required, max 200 characters)
+          example: "Buy groceries (updated)"
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Optional task description (max 2000 characters)
+          example: "Milk, eggs, bread, butter"
+
+    TaskCompletionRequest:
+      type: object
+      required:
+        - is_completed
+      properties:
+        is_completed:
+          type: boolean
+          description: Task completion status (true = complete, false = incomplete)
+          example: true
+
+    TaskResponse:
+      type: object
+      required:
+        - id
+        - title
+        - is_completed
+        - user_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+          example: "650e8400-e29b-41d4-a716-446655440001"
+        title:
+          type: string
+          description: Task title
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Task description (null if not provided)
+          example: "Milk, eggs, bread"
+        is_completed:
+          type: boolean
+          description: Task completion status
+          example: false
+        user_id:
+          type: string
+          format: uuid
+          description: Owner user ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp (UTC)
+          example: "2026-01-06T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC)
+          example: "2026-01-06T10:30:00Z"
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+        - total
+        - limit
+        - offset
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+          description: Array of tasks (empty if no tasks)
+        total:
+          type: integer
+          description: Total number of tasks owned by user
+          example: 2
+        limit:
+          type: integer
+          description: Maximum tasks returned in this response
+          example: 50
+        offset:
+          type: integer
+          description: Number of tasks skipped
+          example: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+        - status_code
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: "Not authorized to access this task"
+        status_code:
+          type: integer
+          description: HTTP status code
+          example: 403
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - detail
+        - status_code
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+                description: Location of the error in the request
+                example: ["body", "title"]
+              msg:
+                type: string
+                description: Error message
+                example: "Title cannot be empty"
+              type:
+                type: string
+                description: Error type
+                example: "value_error.str.min_length"
+        status_code:
+          type: integer
+          description: HTTP status code (always 422 for validation errors)
+          example: 422
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /api/auth/login endpoint.
+        Include in Authorization header as: Authorization: Bearer <token>
+
+security:
+  - BearerAuth: []  # All task endpoints require authentication
