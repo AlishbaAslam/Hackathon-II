@@ -158,14 +158,6 @@ The backend loads environment variables from a local `.env` file (if present). D
 
 Common variables (see `phase-II-full-stack-todo/backend/src/config.py`):
 
-```env
-DATABASE_URL=sqlite+aiosqlite:///./todo_app.db
-SECRET_KEY=replace-with-a-long-random-secret
-BETTER_AUTH_SECRET=replace-with-a-long-random-secret
-CORS_ORIGINS=http://localhost:3000
-DEBUG=False
-```
-
 Backend URLs:
 
 - `http://localhost:8000/health`
