@@ -69,10 +69,10 @@
   :root {
     --background-light: #0f172a;
     --background-dark: #020617;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
+    --text-primary: #0f172a;
+    --text-secondary: #0f172a;
     --text-muted: #64748b;
-    --border-light: #1e293b;
+    --border-light: #e2e8f0;
     --border-medium: #334155;
   }
 }
