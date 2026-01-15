@@ -141,6 +141,22 @@ class ApiClient {
       method: 'DELETE',
     }, token);
   }
+
+  // Chat methods
+  async chat(userId: string, message: string, token: string, conversationId?: number): Promise<{conversation_id: number, response: string, tool_calls: any[]}> {
+    const requestBody: {message: string, conversation_id?: number} = {
+      message: message
+    };
+
+    if (conversationId) {
+      requestBody.conversation_id = conversationId;
+    }
+
+    return this.request<{conversation_id: number, response: string, tool_calls: any[]}>(`/api/${userId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    }, token);
+  }
 }
 
 // Export a singleton instance

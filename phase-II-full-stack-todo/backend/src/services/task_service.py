@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from sqlalchemy import func
 from fastapi import HTTPException, status
 from src.models.task import Task
 from src.models.user import User
@@ -113,16 +114,15 @@ async def get_user_tasks(
     limit = min(limit, 100)
 
     # Get total count
-    count_result = await db.execute(
-        select(Task).where(Task.user_id == user.id)
-    )
-    total = len(count_result.all())
+    count_statement = select(func.count(Task.id)).where(Task.user_id == user.id)
+    count_result = await db.execute(count_statement)
+    total = count_result.scalar_one()
 
-    # Get paginated tasks (newest first)
+    # Get paginated tasks (oldest first)
     result = await db.execute(
         select(Task)
         .where(Task.user_id == user.id)
-        .order_by(Task.created_at.desc())
+        .order_by(Task.created_at.asc())
         .limit(limit)
         .offset(offset)
     )

@@ -181,6 +181,13 @@ backend/
 - SQLModel 0.0.24+ (001-backend)
 - PostgreSQL 15+ via Neon DB (001-backend)
 
+### Active Agents for Project
+- **mcp-tools-specialist**: Use this agent when designing and implementing MCP tools using the Official MCP SDK in the current project. This agent should be used specifically for creating stateless tools with user_id isolation and DB persistence that follow the Spec-Driven Development (SDD) workflow. It ALWAYS uses Context7 MCP for all doc access/updates.
+- **ai-agent-engineer**: Use this agent when building and configuring OpenAI Agents SDK logic using OpenRouter (no OpenAI key) for the AI-powered chatbot project. This agent handles agent creation, tool calling, behavior mapping, confirmation responses, and error handling. It ALWAYS uses Context7 MCP for all doc access/updates.
+- **chatbot-spec-architect**: Use this agent when writing, validating, and updating specifications for the AI-powered chatbot project (overview, features, API endpoints, MCP tools, agent behavior, conversation flow, database models). It ALWAYS uses Context7 MCP for all doc access/updates.
+- **chat-endpoint-developer**: Use this agent when implementing the stateless FastAPI chat endpoint (/api/{user_id}/chat). Handles message reception, conversation history fetch/store from DB, agent invocation with OpenRouter, and response handling. It ALWAYS uses Context7 MCP for all doc access/updates.
+- **chatkit-ui-integrator**: Use this agent when integrating OpenAI ChatKit frontend for the AI-powered chatbot project. Handles ChatKit setup, domain allowlist configuration, environment variables, and connecting the chat UI to the backend endpoint. It ALWAYS uses Context7 MCP for all doc access/updates.
+
 ## Recent Changes
 
 - 001-frontend-ui: Added TypeScript 5.0+ + Next.js 16+
@@ -189,3 +196,143 @@ backend/
 - 001-backend: Added Python 3.13+ + FastAPI 0.115+
 - 001-backend: Added SQLModel 0.0.24+ with PostgreSQL 15+
 - 001-backend: Added JWT authentication with python-jose and bcrypt password hashing
+
+### Phase III Project Requirements (Todo AI Chatbot)
+
+**Requirements**
+Implement conversational interface for all Basic Level features
+Use OpenAI Agents SDK for AI logic
+Build MCP server with Official MCP SDK that exposes task operations as tools
+Stateless chat endpoint that persists conversation state to database
+AI agents use MCP tools to manage tasks. The MCP tools will also be stateless and will store state in the database.
+
+**Technology Stack**
+
+Component | Technology
+---|---
+Frontend | OpenAI ChatKit
+Backend | Python FastAPI
+AI Framework | OpenAI Agents SDK
+MCP Server | Official MCP SDK
+ORM | SQLModel
+Database | Neon Serverless PostgreSQL
+Authentication | Better Auth
+
+**Database Models**
+
+Model | Fields | Description
+---|---|---
+Task | user_id, id, title, description, completed, created_at, updated_at | Todo items
+Conversation | user_id, id, created_at, updated_at | Chat session
+Message | user_id, id, conversation_id, role (user/assistant), content, created_at | Chat history
+
+**Chat API Endpoint**
+
+Method | Endpoint | Description
+---|---|---
+POST | /api/{user_id}/chat | Send message & get AI response
+
+**Request**
+
+Field | Type | Required | Description
+---|---|---|---
+conversation_id | integer | No | Existing conversation ID (creates new if not provided)
+message | string | Yes | User's natural language message
+
+**Response**
+
+Field | Type | Description
+---|---|---
+conversation_id | integer | The conversation ID
+response | string | AI assistant's response
+tool_calls | array | List of MCP tools invoked
+
+**MCP Tools Specification**
+The MCP server must expose the following tools for the AI agent:
+
+Tool: add_task
+Purpose: Create a new task
+Parameters: user_id (string, required), title (string, required), description (string, optional)
+Returns: task_id, status, title
+
+Tool: list_tasks
+Purpose: Retrieve tasks from the list
+Parameters: status (string, optional: "all", "pending", "completed")
+Returns: Array of task objects
+
+Tool: complete_task
+Purpose: Mark a task as complete
+Parameters: user_id (string, required), task_id (integer, required)
+Returns: task_id, status, title
+
+Tool: delete_task
+Purpose: Remove a task from the list
+Parameters: user_id (string, required), task_id (integer, required)
+Returns: task_id, status, title
+
+Tool: update_task
+Purpose: Modify task title or description
+Parameters: user_id (string, required), task_id (integer, required), title (string, optional), description (string, optional)
+Returns: task_id, status, title
+
+**Agent Behavior Specification**
+
+Behavior | Description
+---|---
+Task Creation | When user mentions adding/creating/remembering something, use add_task
+Task Listing | When user asks to see/show/list tasks, use list_tasks with appropriate filter
+Task Completion | When user says done/complete/finished, use complete_task
+Task Deletion | When user says delete/remove/cancel, use delete_task
+Task Update | When user says change/update/rename, use update_task
+Confirmation | Always confirm actions with friendly response
+Error Handling | Gracefully handle task not found and other errors
+
+**Conversation Flow (Stateless Request Cycle)**
+1. Receive user message
+2. Fetch conversation history from database
+3. Build message array for agent (history + new message)
+4. Store user message in database
+5. Run agent with MCP tools
+6. Agent invokes appropriate MCP tool(s)
+7. Store assistant response in database
+8. Return response to client
+Server holds NO state (ready for next request)
+
+**Natural Language Commands**
+The chatbot should understand and respond to:
+
+User Says | Agent Should
+---|---
+"Add a task to buy groceries" | Call add_task with title "Buy groceries"
+"Show me all my tasks" | Call list_tasks with status "all"
+"What's pending?" | Call list_tasks with status "pending"
+"Mark task 3 as complete" | Call complete_task with task_id 3
+"Delete the meeting task" | Call list_tasks first, then delete_task
+"Change task 1 to 'Call mom tonight'" | Call update_task with new title
+"I need to remember to pay bills" | Call add_task with title "Pay bills"
+"What have I completed?" | Call list_tasks with status "completed"
+
+**OpenAI ChatKit Setup & Deployment**
+Domain Allowlist Configuration (Required for Hosted ChatKit)
+
+Before deploying your chatbot frontend, you must configure OpenAI's domain allowlist for security:
+
+- Deploy your frontend first to get a production URL:
+  - Vercel: https://your-app.vercel.app
+  - GitHub Pages: https://username.github.io/repo-name
+  - Custom domain: https://yourdomain.com
+
+- Add your domain to OpenAI's allowlist:
+  - Navigate to: https://platform.openai.com/settings/organization/security/domain-allowlist
+  - Click "Add domain"
+  - Enter your frontend URL (without trailing slash)
+  - Save changes
+
+- Get your ChatKit domain key:
+  - After adding the domain, OpenAI will provide a domain key
+  - Pass this key to your ChatKit configuration
+
+**Environment Variables**
+NEXT_PUBLIC_OPENAI_DOMAIN_KEY=your-domain-key-here
+
+Note: The hosted ChatKit option only works after adding the correct domains under Security → Domain Allowlist. Local development (localhost) typically works without this configuration.

@@ -47,6 +47,12 @@ export default function DashboardPage() {
   const pendingTasks = tasks.filter(task => !task.completed).length;
   const completionRate = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
+  // Create a mapping of task IDs to consistent short IDs based on original order
+  const taskShortIdMap = tasks.reduce((map, task, index) => {
+    map[task.id] = index + 1;
+    return map;
+  }, {} as Record<string, number>);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[--background-gradient-start] to-[--background-gradient-end] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -237,7 +243,9 @@ export default function DashboardPage() {
                         className="hover:bg-white/50 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-[--text-primary] truncate max-w-xs">{task.title}</div>
+                          <div className="text-sm font-medium text-[--text-primary] truncate max-w-xs">
+                            {taskShortIdMap[task.id] && <span className="font-bold text-[--color-primary] mr-2">{taskShortIdMap[task.id]}.</span>}{task.title}
+                          </div>
                           {task.description && (
                             <div className="text-sm text-[--text-secondary] truncate max-w-xs">{task.description}</div>
                           )}

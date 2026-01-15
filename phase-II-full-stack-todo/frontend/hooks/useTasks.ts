@@ -38,7 +38,7 @@ export const useTasks = (): TasksContextType => {
 
     try {
       const userTasks = await taskService.getTasks(user.id);
-      setTasks(userTasks);
+      setTasks(userTasks); // Backend already sorts by newest first
     } catch (err: any) {
       setError(err.message || 'Failed to fetch tasks');
       setTasks([]);
@@ -55,7 +55,7 @@ export const useTasks = (): TasksContextType => {
 
     try {
       const newTask = await taskService.createTask(user.id, taskData);
-      setTasks(prev => [...prev, newTask]);
+      setTasks(prev => [...prev, newTask]); // Add new task to the end
       return newTask;
     } catch (err: any) {
       setError(err.message || 'Failed to create task');

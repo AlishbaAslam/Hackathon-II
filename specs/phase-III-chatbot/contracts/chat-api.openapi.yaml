@@ -1,0 +1,117 @@
+openapi: 3.0.1
+info:
+  title: Todo AI Chatbot API
+  description: API for the Phase-III Todo AI Chatbot feature
+  version: 1.0.0
+paths:
+  /api/{user_id}/chat:
+    post:
+      summary: Send a message to the AI chatbot
+      description: Process a natural language message and return AI-generated response with tool calls
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The user ID from JWT token
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversation_id:
+                  type: integer
+                  description: Existing conversation ID (creates new if not provided)
+                  example: 123
+                message:
+                  type: string
+                  description: User's natural language message
+                  example: "Add a task to buy groceries"
+              required:
+                - message
+      responses:
+        '200':
+          description: Successful response from AI chatbot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversation_id:
+                    type: integer
+                    description: The conversation ID
+                    example: 123
+                  response:
+                    type: string
+                    description: AI assistant's response
+                    example: "I've added the task 'Buy groceries' to your list."
+                  tool_calls:
+                    type: array
+                    description: List of MCP tools invoked
+                    items:
+                      type: object
+                      properties:
+                        tool_name:
+                          type: string
+                          description: Name of the tool called
+                          example: "add_task"
+                        parameters:
+                          type: object
+                          description: Parameters passed to the tool
+                          example:
+                            user_id: "user123"
+                            title: "Buy groceries"
+                required:
+                  - conversation_id
+                  - response
+                  - tool_calls
+        '401':
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Error message
+                    example: "Invalid authentication credentials"
+                required:
+                  - detail
+        '403':
+          description: Forbidden - User trying to access another user's data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Error message
+                    example: "Access denied: Cannot access another user's conversation"
+                required:
+                  - detail
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Error message
+                    example: "Internal server error occurred"
+                required:
+                  - detail
+      security:
+        - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
