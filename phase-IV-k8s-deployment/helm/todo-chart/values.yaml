@@ -1,0 +1,146 @@
+# Default values for todo-chatbot
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+# Backend configuration
+backend:
+  # Image configuration
+  image:
+    repository: todo-backend
+    tag: phaseiv
+    pullPolicy: IfNotPresent
+
+  # Replica count
+  replicaCount: 1
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8000
+
+  # Environment variables
+  env:
+    DATABASE_URL: "sqlite+aiosqlite:///./test_todo_app.db"
+    SECRET_KEY: "your-super-secret-key-change-this-in-production"
+    ALGORITHM: "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /docs
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /docs
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+# Frontend configuration
+frontend:
+  # Image configuration
+  image:
+    repository: todo-frontend
+    tag: phaseiv
+    pullPolicy: IfNotPresent
+
+  # Replica count
+  replicaCount: 1
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 3000
+
+  # Environment variables
+  env:
+    NEXT_PUBLIC_API_BASE_URL: "/api"
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /health.json
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health.json
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80    
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: todo-chatbot.local
+      paths:
+        - path: /api
+          pathType: Prefix
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

@@ -1,12 +1,13 @@
-# Hackathon II – Todo App (Phase I + Phase II + Phase III)
+# Hackathon II – Todo App (Phase I + Phase II + Phase III + Phase IV)
 
 This repository contains an **evolutionary todo project** built using **Spec-Driven Development (SDD)** (Spec‑Kit Plus). It includes:
 
 - **Phase I (Completed / Frozen):** a Python **CLI** todo application with **in-memory storage**.
 - **Phase II (Completed):** a **full-stack web application** with a Next.js frontend and FastAPI backend, using JWT authentication and a relational database.
 - **Phase III (Completed):** an **AI-powered chatbot** with natural language processing using OpenAI Agents SDK and MCP tools for task management.
+- **Phase IV (Completed):** **Kubernetes deployment** with Docker containers, Helm charts, and Minikube for cloud-native orchestration.
 
-This README documents the project purpose, key features, folder structure, and setup/usage information for all three phases.
+This README documents the project purpose, key features, folder structure, and setup/usage information for all four phases.
 
 ---
 
@@ -90,6 +91,21 @@ Located in `phase-II-full-stack-todo/` with integrated AI functionality.
 - **delete_task**: Remove a task from the list
 - **update_task**: Modify task title or description
 
+### Phase IV — Kubernetes Deployment
+
+Located in `phase-IV-k8s-deployment/`.
+
+#### Cloud-Native Features
+
+- **Containerization**: Docker containers for both frontend and backend services
+- **Orchestration**: Kubernetes manifests managed with Helm charts
+- **Local Development**: Minikube-based deployment for easy testing
+- **Scalability**: Horizontal pod autoscaling and load balancing
+- **Service Discovery**: Internal service communication within the cluster
+- **Persistent Storage**: Stateful storage for database and application data
+- **Configuration Management**: Kubernetes ConfigMaps and Secrets for environment configuration
+- **Health Monitoring**: Built-in liveness and readiness probes
+
 ---
 
 ## Tech Stack
@@ -124,6 +140,13 @@ Located in `phase-II-full-stack-todo/` with integrated AI functionality.
 - **Frontend**: OpenAI ChatKit
 - **Database**: Neon Serverless PostgreSQL
 - **Authentication**: Better Auth with JWT
+
+### Phase IV (Kubernetes)
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes + Helm
+- **Local Deployment**: Minikube
+- **Infrastructure as Code**: Helm Charts
+- **Service Mesh**: Kubernetes Services and Ingress
 
 ---
 
@@ -161,7 +184,18 @@ Top-level:
 │       └── README.md
 ├── specs/                     # Specifications (backend + UI + chatbot, plus history)
 ├── history/                   # Prompt History Records (PHR)
-├── README.md                  # Phase I, II and III usage details
+├── phase-IV-k8s-deployment/   # Phase IV: Kubernetes manifests, Dockerfiles, Helm charts
+│   ├── docker/                # Dockerfiles for frontend and backend
+│   │   ├── Dockerfile.backend
+│   │   ├── Dockerfile.frontend
+│   │   └── .dockerignore
+│   ├── helm/                  # Helm charts for deployment
+│   │   └── todo-chart/        # Main Helm chart for the todo application
+│   │       ├── Chart.yaml     # Chart metadata
+│   │       ├── values.yaml    # Default configuration values
+│   │       └── templates/     # Kubernetes manifest templates
+│   └── minikube/              # Minikube deployment scripts and configurations
+├── README.md                  # Phase I, II, III and IV usage details
 ├── CLAUDE.md                  # Claude Code repo instructions
 └── .specify/memory/constitution.md  # Project constitution (governance)
 ```
@@ -367,6 +401,56 @@ The chatbot uses a stateless endpoint that persists conversation state to the da
   "response": "I've added the task 'buy groceries' to your list.",
   "tool_calls": [{"name": "add_task", "arguments": {"title": "buy groceries"}}]
 }
+```
+
+---
+
+## Phase IV — Deploy to Kubernetes (Minikube)
+
+### Prerequisites for Kubernetes Deployment
+
+- **Docker**: Container runtime
+- **kubectl**: Kubernetes command-line tool
+- **Helm 3**: Package manager for Kubernetes
+- **Minikube**: Local Kubernetes environment
+
+### Local Deployment with Minikube
+
+1. Start Minikube:
+```bash
+minikube start
+```
+
+2. Navigate to the Helm chart directory:
+```bash
+cd phase-IV-k8s-deployment/helm/todo-chart
+```
+
+3. Install the Helm chart:
+```bash
+helm install todo-app .
+```
+
+4. Verify the deployment:
+```bash
+kubectl get pods
+kubectl get services
+```
+
+5. Access the application:
+```bash
+minikube service todo-app-frontend-svc --url
+```
+
+### Using the Deployed Application
+
+Once deployed, the application will be available at the URL provided by the `minikube service` command. The frontend will connect to the backend service internally within the cluster.
+
+### Uninstall the Application
+
+To remove the application from your Minikube cluster:
+```bash
+helm uninstall todo-app
 ```
 
 ---
