@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "todo-chatbot.fullname" . }}-config
+  labels:
+    {{- include "todo-chatbot.labels" . | nindent 4 }}
+data:
+  # Application configuration
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+
+  # Backend configuration
+  BACKEND_PORT: "8000"
+
+  # Frontend configuration
+  FRONTEND_PORT: "3000"
+
+  # Database configuration (referenced from values)
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+
+  # Health check paths
+  BACKEND_HEALTH_PATH: "/docs"
+  FRONTEND_HEALTH_PATH: "/health"

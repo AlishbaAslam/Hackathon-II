@@ -1,0 +1,68 @@
+# Multi-stage build for Next.js frontend
+# Stage 1: Install dependencies
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+# Stage 2: Build the application
+FROM node:20 AS builder
+
+WORKDIR /app
+
+# Copy dependencies from previous stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application source code
+COPY . ./
+
+COPY .env .env
+RUN cat .env
+
+ARG NEXT_PUBLIC_API_BASE_URL=http://todo-app-todo-chatbot-backend-svc:8000
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+RUN echo "NEXT_PUBLIC_API_BASE_URL is set to: $NEXT_PUBLIC_API_BASE_URL"
+
+# Create a simple health check page
+RUN mkdir -p public && echo '{"status":"healthy","timestamp":"'$(date -Iseconds)'"}' > public/health.json
+
+# Build the application
+RUN npm run build
+
+# Stage 3: Runtime image
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Install dumb-init for signal handling
+RUN apk add --no-cache dumb-init
+
+# Copy package.json for reference
+COPY package.json ./
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy built application from builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check - check for the health.json file we created
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health.json | grep -q "healthy" || exit 1
+
+# Start the application with dumb-init
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "start"]

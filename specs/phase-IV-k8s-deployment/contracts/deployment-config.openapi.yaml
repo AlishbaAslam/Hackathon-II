@@ -1,0 +1,312 @@
+openapi: 3.0.1
+info:
+  title: Todo Chatbot Kubernetes Deployment Configuration
+  description: API specification for deployment configuration parameters of the Todo Chatbot application on Kubernetes
+  version: 1.0.0
+  contact:
+    name: Deployment Support
+    email: support@example.com
+
+servers:
+  - url: https://minikube.local
+    description: Local Minikube development server
+
+tags:
+  - name: Deployment Configuration
+    description: Configuration parameters for Kubernetes deployment
+
+paths:
+  /config/deployment:
+    get:
+      tags:
+        - Deployment Configuration
+      summary: Get deployment configuration
+      description: |
+        Retrieves the current deployment configuration for the Todo Chatbot application.
+        This includes resource limits, environment variables, and service configurations.
+      operationId: getDeploymentConfig
+      responses:
+        '200':
+          description: Deployment configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentConfigResponse'
+              examples:
+                success:
+                  summary: Sample deployment configuration
+                  value:
+                    backend:
+                      image: "todo-backend:latest"
+                      replicas: 1
+                      resources:
+                        requests:
+                          cpu: "100m"
+                          memory: "128Mi"
+                        limits:
+                          cpu: "500m"
+                          memory: "512Mi"
+                      env:
+                        - name: "DATABASE_URL"
+                          valueFrom:
+                            secretKeyRef:
+                              name: "db-secret"
+                              key: "url"
+                    frontend:
+                      image: "todo-frontend:latest"
+                      replicas: 1
+                      resources:
+                        requests:
+                          cpu: "50m"
+                          memory: "64Mi"
+                        limits:
+                          cpu: "200m"
+                          memory: "256Mi"
+                    ingress:
+                      hostname: "todo-chatbot.minikube.local"
+                      path: "/"
+                      tlsEnabled: false
+        '500':
+          description: Internal server error retrieving configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                error:
+                  summary: Configuration retrieval failed
+                  value:
+                    detail: "Unable to retrieve deployment configuration"
+                    status_code: 500
+
+  /config/deployment:
+    put:
+      tags:
+        - Deployment Configuration
+      summary: Update deployment configuration
+      description: |
+        Updates the deployment configuration for the Todo Chatbot application.
+        This affects resource allocation, environment variables, and service settings.
+      operationId: updateDeploymentConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentConfigRequest'
+            examples:
+              update_resources:
+                summary: Update resource allocations
+                value:
+                  backend:
+                    replicas: 2
+                    resources:
+                      requests:
+                        cpu: "200m"
+                        memory: "256Mi"
+                      limits:
+                        cpu: "1000m"
+                        memory: "1Gi"
+                  frontend:
+                    replicas: 2
+                    resources:
+                      requests:
+                        cpu: "100m"
+                        memory: "128Mi"
+                      limits:
+                        cpu: "500m"
+                        memory: "512Mi"
+      responses:
+        '200':
+          description: Deployment configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentConfigResponse'
+        '400':
+          description: Invalid configuration parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error updating configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    DeploymentConfigRequest:
+      type: object
+      required:
+        - backend
+        - frontend
+      properties:
+        backend:
+          $ref: '#/components/schemas/BackendConfig'
+        frontend:
+          $ref: '#/components/schemas/FrontendConfig'
+        ingress:
+          $ref: '#/components/schemas/IngressConfig'
+
+    DeploymentConfigResponse:
+      type: object
+      required:
+        - backend
+        - frontend
+        - ingress
+      properties:
+        backend:
+          $ref: '#/components/schemas/BackendConfig'
+        frontend:
+          $ref: '#/components/schemas/FrontendConfig'
+        ingress:
+          $ref: '#/components/schemas/IngressConfig'
+
+    BackendConfig:
+      type: object
+      required:
+        - image
+        - replicas
+        - resources
+      properties:
+        image:
+          type: string
+          description: Docker image for the backend service
+          example: "todo-backend:latest"
+        replicas:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: Number of backend pod replicas
+          example: 1
+        resources:
+          $ref: '#/components/schemas/ResourceRequirements'
+        env:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvironmentVariable'
+          description: Environment variables for the backend
+
+    FrontendConfig:
+      type: object
+      required:
+        - image
+        - replicas
+        - resources
+      properties:
+        image:
+          type: string
+          description: Docker image for the frontend service
+          example: "todo-frontend:latest"
+        replicas:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: Number of frontend pod replicas
+          example: 1
+        resources:
+          $ref: '#/components/schemas/ResourceRequirements'
+        env:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvironmentVariable'
+          description: Environment variables for the frontend
+
+    IngressConfig:
+      type: object
+      required:
+        - hostname
+        - path
+      properties:
+        hostname:
+          type: string
+          description: Hostname for ingress routing
+          example: "todo-chatbot.minikube.local"
+        path:
+          type: string
+          description: Path prefix for the application
+          example: "/"
+        tlsEnabled:
+          type: boolean
+          description: Whether TLS is enabled for the ingress
+          example: false
+
+    ResourceRequirements:
+      type: object
+      properties:
+        requests:
+          $ref: '#/components/schemas/ResourceList'
+        limits:
+          $ref: '#/components/schemas/ResourceList'
+
+    ResourceList:
+      type: object
+      properties:
+        cpu:
+          type: string
+          description: CPU resource (in millicores or cores)
+          example: "100m"
+        memory:
+          type: string
+          description: Memory resource (in bytes or multiples)
+          example: "128Mi"
+
+    EnvironmentVariable:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Environment variable name
+          example: "DATABASE_URL"
+        value:
+          type: string
+          description: Environment variable value
+          example: "postgresql://localhost:5432/todo_db"
+        valueFrom:
+          $ref: '#/components/schemas/ValueFromSource'
+
+    ValueFromSource:
+      type: object
+      properties:
+        secretKeyRef:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of the secret
+              example: "db-secret"
+            key:
+              type: string
+              description: Key in the secret
+              example: "url"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+        - status_code
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: "Configuration validation failed"
+        status_code:
+          type: integer
+          description: HTTP status code
+          example: 400
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token for administrative access to deployment configuration.
+        Include in Authorization header as: Authorization: Bearer <token>
+
+security: []  # Configuration endpoints may not require auth in development
