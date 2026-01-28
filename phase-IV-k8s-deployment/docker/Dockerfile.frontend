@@ -1,11 +1,23 @@
-# Multi-stage build for Next.js frontend
-# Stage 1: Install dependencies
+# Stage 1: Install all dependencies for building
 FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json ./
+# Copy package.json and lockfile
+COPY ../phase-II-full-stack-todo/frontend/package.json ../phase-II-full-stack-todo/frontend/package-lock.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
+
+# Stage 1.5: Install production-only dependencies for runtime
+FROM node:20-alpine AS prod-deps
+
+WORKDIR /app
+
+# Copy package.json and lockfile
+COPY ../phase-II-full-stack-todo/frontend/package.json ../phase-II-full-stack-todo/frontend/package-lock.json ./
+
+# Install production dependencies only for runtime
 RUN npm ci --only=production
 
 # Stage 2: Build the application
@@ -13,24 +25,35 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copy dependencies from previous stage
+# Copy package.json first for npm commands
+COPY ../phase-II-full-stack-todo/frontend/package.json ./
+
+# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy application source code
-COPY . ./
+# Copy necessary source files for building
+COPY ../phase-II-full-stack-todo/frontend/next.config.mjs ./
+COPY ../phase-II-full-stack-todo/frontend/tsconfig.json ./
+COPY ../phase-II-full-stack-todo/frontend/tailwind.config.ts ./
+COPY ../phase-II-full-stack-todo/frontend/.eslintrc.json ./
+COPY ../phase-II-full-stack-todo/frontend/postcss.config.js ./
+COPY ../phase-II-full-stack-todo/frontend/contexts ./contexts
+COPY ../phase-II-full-stack-todo/frontend/app ./app
+COPY ../phase-II-full-stack-todo/frontend/components ./components
+COPY ../phase-II-full-stack-todo/frontend/hooks ./hooks
+COPY ../phase-II-full-stack-todo/frontend/lib ./lib
+COPY ../phase-II-full-stack-todo/frontend/public ./public
+COPY ../phase-II-full-stack-todo/frontend/services ./services
+COPY ../phase-II-full-stack-todo/frontend/next-env.d.ts ./
 
-COPY .env .env
-RUN cat .env
-
-ARG NEXT_PUBLIC_API_BASE_URL=http://todo-app-todo-chatbot-backend-svc:8000
+# Build environment variables (if needed at build-time)
+ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
-RUN echo "NEXT_PUBLIC_API_BASE_URL is set to: $NEXT_PUBLIC_API_BASE_URL"
-
-# Create a simple health check page
+# Create health check file
 RUN mkdir -p public && echo '{"status":"healthy","timestamp":"'$(date -Iseconds)'"}' > public/health.json
 
-# Build the application
+# Build Next.js app
 RUN npm run build
 
 # Stage 3: Runtime image
@@ -38,31 +61,33 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install dumb-init for signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling
+RUN apk update && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community dumb-init curl
 
 # Copy package.json for reference
-COPY package.json ./
+COPY ../phase-II-full-stack-todo/frontend/package.json ./
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy production dependencies
+COPY --from=prod-deps /app/node_modules ./node_modules
 
-# Copy built application from builder stage
+# Copy built application
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# Copy .env to runtime container
+COPY ../phase-II-full-stack-todo/frontend/.env .env
+
+# Non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 USER nextjs
 
-# Expose port
+# Expose default Next.js port
 EXPOSE 3000
 
-# Health check - check for the health.json file we created
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost:3000/health.json | grep -q "healthy" || exit 1
+  CMD curl -f http://localhost:3000/health.json || exit 1
 
-# Start the application with dumb-init
+# Start the app with dumb-init
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]

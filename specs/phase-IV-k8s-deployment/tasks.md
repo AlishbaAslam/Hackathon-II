@@ -13,10 +13,10 @@
 
 ## Phase 2: Foundational
 
-- [ ] T005 Verify phase-II-full-stack-todo folder remains unmodified as constraint
-- [ ] T006 Research optimal base images for multi-stage Docker builds (alpine vs slim vs distroless)
-- [ ] T007 Set up Docker build context to reference phase-II-full-stack-todo without copying
-- [ ] T008 Design Helm chart structure with appropriate templates for deployments and services
+- [X] T005 Verify phase-II-full-stack-todo folder remains unmodified as constraint
+- [X] T006 Research optimal base images for multi-stage Docker builds (alpine vs slim vs distroless)
+- [X] T007 Set up Docker build context to reference phase-II-full-stack-todo without copying
+- [X] T008 Design Helm chart structure with appropriate templates for deployments and services
 
 ## Phase 3: [US1] Deploy Todo Chatbot on Local Kubernetes Cluster
 

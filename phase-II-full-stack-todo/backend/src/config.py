@@ -22,8 +22,15 @@ class Settings:
 
     # CORS Configuration
     CORS_ORIGINS: List[str] = [
-        origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
-    ]
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:41397",
+        "http://127.0.0.1:41397",
+        ]
 
     # Application Settings
     API_TITLE: str = os.getenv("API_TITLE", "Todo Backend API")
