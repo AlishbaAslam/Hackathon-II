@@ -1,0 +1,26 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+Services:
+- Frontend: http://{{ index .Values.ingress.hosts 0 "host" | default "todo.local" }}
+- Backend API: http://{{ include "todo-chart.fullname" . }}-backend:{{ .Values.services.backend.port }}/docs (Swagger UI)
+
+To access your Todo application:
+1. Ensure your ingress controller is running
+2. Update your /etc/hosts file with the ingress IP and host:
+   <INGRESS_IP> {{ index .Values.ingress.hosts 0 "host" | default "todo.local" }}
+3. Visit http://{{ index .Values.ingress.hosts 0 "host" | default "todo.local" }} in your browser
+
+For troubleshooting, check the logs of individual services:
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-backend
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-frontend
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-recurring-task-service
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-notification-service
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-audit-service
+kubectl logs deployment/{{ include "todo-chart.fullname" . }}-websocket-service

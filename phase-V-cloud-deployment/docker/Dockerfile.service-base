@@ -1,0 +1,40 @@
+# Use Python 3.13 slim image as base
+FROM python:3.13-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        gnupg \
+        libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv package manager
+RUN pip install --upgrade pip && pip install uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock /app/
+
+# Install dependencies using uv
+RUN uv sync --locked --no-dev
+
+# Set up a non-root user
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 appuser --ingroup appgroup
+
+USER appuser
+
+# Expose default port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1

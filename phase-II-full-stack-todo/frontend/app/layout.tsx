@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
-import ChatWidget from "../components/chat/ChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,7 +25,6 @@ export default function RootLayout({
         <AuthProvider>
           <div className="min-h-screen bg-gradient-to-br from-[--background-gradient-start] to-[--background-gradient-end]">
             {children}
-            <ChatWidget />
           </div>
         </AuthProvider>
       </body>

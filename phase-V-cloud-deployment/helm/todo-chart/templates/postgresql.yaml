@@ -1,0 +1,64 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-postgresql
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgresql.auth.postgresPassword | quote }}
+            - name: POSTGRES_USER
+              value: "postgres"
+          volumeMounts:
+            - name: postgresql-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: postgresql-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-postgresql
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: postgresql
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: postgresql
+{{- end }}

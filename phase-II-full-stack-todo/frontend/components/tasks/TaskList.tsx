@@ -34,12 +34,6 @@ export default function TaskList({
     }
   };
 
-  // Create a mapping of task IDs to consistent short IDs based on original order
-  const taskShortIdMap = tasks.reduce((map, task, index) => {
-    map[task.id] = index + 1;
-    return map;
-  }, {} as Record<string, number>);
-
   // Filter tasks based on active filter
   const filteredTasks = tasks.filter(task => {
     if (activeFilter === 'active') return !task.completed;
@@ -133,22 +127,15 @@ export default function TaskList({
         </div>
       ) : (
         <ul className="divide-y divide-white/20">
-          {filteredTasks.map((task, index) => {
-            // Add shortId based on the consistent mapping (original task order)
-            const taskWithShortId = {
-              ...task,
-              shortId: taskShortIdMap[task.id]
-            };
-            return (
-              <TaskItem
-                key={task.id}
-                task={taskWithShortId}
-                onToggle={onToggle}
-                onDelete={onDelete}
-                onEdit={onEdit}
-              />
-            );
-          })}
+          {filteredTasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              onEdit={onEdit}
+            />
+          ))}
         </ul>
       )}
     </div>

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-audit-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: audit-service
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: audit-service
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "audit-service"
+        dapr.io/app-port: "{{ .Values.services.auditService.port }}"
+        dapr.io/config: "{{ .Values.dapr.config }}"
+        dapr.io/components: "kafka-pubsub,statestore"
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: audit-service
+    spec:
+      containers:
+        - name: audit-service
+          image: "{{ .Values.images.auditService.repository }}:{{ .Values.images.auditService.tag }}"
+          imagePullPolicy: {{ .Values.images.auditService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.auditService.port }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.env.databaseUrl | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ .Values.kafka.brokers | quote }}
+            - name: CONSUMER_GROUP
+              value: {{ .Values.kafka.consumerGroup | quote }}
+          resources:
+            {{- toYaml .Values.resources.auditService | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-audit-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: audit-service
+spec:
+  type: {{ .Values.services.auditService.type }}
+  ports:
+    - port: {{ .Values.services.auditService.port }}
+      targetPort: {{ .Values.services.auditService.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: audit-service

@@ -1,0 +1,24 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: "localhost:6379"
+  - name: redisPassword
+    value: ""
+  - name: enableTLS
+    value: "false"
+  - name: consumerID
+    value: "todo-backend"
+  - name: processingTimeout
+    value: "60s"
+  - name: redeliverInterval
+    value: "30s"
+  - name: queueDepth
+    value: "100"
+  - name: concurrency
+    value: "10"

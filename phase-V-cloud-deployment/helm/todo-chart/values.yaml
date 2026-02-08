@@ -1,0 +1,143 @@
+# Default values for todo-chart
+
+# Image configurations
+images:
+  frontend:
+    repository: todo-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  backend:
+    repository: todo-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  recurringTaskService:
+    repository: todo-recurring-task-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  notificationService:
+    repository: todo-notification-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  auditService:
+    repository: todo-audit-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  websocketService:
+    repository: todo-websocket-service
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Service configurations
+services:
+  frontend:
+    type: ClusterIP
+    port: 3000
+  backend:
+    type: ClusterIP
+    port: 8000
+  recurringTaskService:
+    type: ClusterIP
+    port: 8001
+  notificationService:
+    type: ClusterIP
+    port: 8002
+  auditService:
+    type: ClusterIP
+    port: 8003
+  websocketService:
+    type: ClusterIP
+    port: 8004
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: todo.local
+      paths:
+        - path: /
+          pathType: Prefix
+          backendService: frontend
+        - path: /api
+          pathType: Prefix
+          backendService: backend
+  tls: []
+
+# Resource limits and requests
+resources:
+  frontend:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  backend:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  recurringTaskService:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  notificationService:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  auditService:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  websocketService:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Environment variables
+env:
+  databaseUrl: "postgresql://postgres:password@postgres:5432/todo_db"
+  secretKey: "your-secret-key-here"
+  algorithm: "HS256"
+  accessTokenExpireMinutes: 30
+  corsOrigins: "http://todo.local,https://todo.local"
+
+# Dapr configuration
+dapr:
+  enabled: true
+  appId: "todo-app"
+  config: "dapr-config"
+  components:
+    - name: "kafka-pubsub"
+      type: "pubsub.kafka"
+    - name: "statestore"
+      type: "state.postgresql"
+    - name: "jobs"
+      type: "bindings.cron"
+
+# Kafka configuration
+kafka:
+  enabled: true
+  brokers: "kafka:9092"
+  consumerGroup: "todo-group"
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "password"
+    database: "todo_db"

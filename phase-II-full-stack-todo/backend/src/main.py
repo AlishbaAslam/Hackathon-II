@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from src.config import settings
 from src.core.database import create_tables
-from src.routers import auth, tasks, chat
+from src.routers import auth, tasks
 from src.core.exceptions import UnauthorizedException, ForbiddenException, NotFoundException, ConflictException
 
 @asynccontextmanager
@@ -41,7 +41,6 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(tasks.router)
-app.include_router(chat.router)
 
 
 # Exception handlers

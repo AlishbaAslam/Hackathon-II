@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Audit Service
+  description: Service that handles logging and audit trail of all operations
+  version: 1.0.0
+servers:
+  - url: http://localhost:8003
+    description: Local development server
+  - url: http://audit-service.default.svc.cluster.local
+    description: Kubernetes internal service
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /events/log-operation:
+    post:
+      summary: Log an operation event
+      description: Called when any operation occurs to maintain audit trail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationEvent'
+      responses:
+        '200':
+          description: Event logged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Event logged successfully"
+                  log_id:
+                    type: string
+                    description: Unique identifier for the log entry
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+  /api/{user_id}/audit-log:
+    get:
+      summary: Get audit logs for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user's ID
+        - name: event_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [task_created, task_updated, task_completed, task_deleted, task_recurring_generated, reminder_scheduled, notification_sent]
+          description: Filter logs by event type
+        - name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [task, conversation, message, reminder, notification]
+          description: Filter logs by entity type
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter logs from this date
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter logs until this date
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of logs to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Number of logs to skip
+      responses:
+        '200':
+          description: List of audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/{user_id}/audit-log/{log_id}:
+    get:
+      summary: Get a specific audit log entry
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: log_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit log entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogEntry'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Log not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    OperationEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - entityType
+        - entityId
+        - timestamp
+        - operationDetails
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [task_created, task_updated, task_completed, task_deleted, task_recurring_generated, reminder_scheduled, notification_sent]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user performing the operation
+        entityType:
+          type: string
+          enum: [task, conversation, message, reminder, notification]
+          description: Type of entity being operated on
+        entityId:
+          type: integer
+          description: ID of the entity being operated on
+        timestamp:
+          type: string
+          format: date-time
+          description: When the operation occurred
+        previousState:
+          type: object
+          description: Previous state of the entity (optional)
+        newState:
+          type: object
+          description: New state of the entity (optional)
+        operationDetails:
+          type: object
+          description: Additional details about the operation
+        sourceService:
+          type: string
+          description: Service that generated the event
+        metadata:
+          type: object
+          description: Additional metadata for the operation
+
+    AuditLogEntry:
+      type: object
+      required:
+        - id
+        - userId
+        - eventType
+        - entityType
+        - entityId
+        - timestamp
+        - operationDetails
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the log entry
+        userId:
+          type: string
+          description: ID of the user who performed the operation
+        eventType:
+          type: string
+          enum: [task_created, task_updated, task_completed, task_deleted, task_recurring_generated, reminder_scheduled, notification_sent]
+          description: Type of event
+        entityType:
+          type: string
+          enum: [task, conversation, message, reminder, notification]
+          description: Type of entity involved
+        entityId:
+          type: integer
+          description: ID of the entity involved
+        previousState:
+          type: object
+          description: Previous state of the entity (nullable)
+        newState:
+          type: object
+          description: New state of the entity (nullable)
+        operationDetails:
+          type: object
+          description: Additional details about the operation
+        sourceService:
+          type: string
+          description: Service that generated the event
+        timestamp:
+          type: string
+          format: date-time
+          description: When the operation occurred
+        metadata:
+          type: object
+          description: Additional metadata for the operation
+
+    AuditLogListResponse:
+      type: object
+      required:
+        - logs
+        - total
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        total:
+          type: integer
+          description: Total number of logs matching the criteria

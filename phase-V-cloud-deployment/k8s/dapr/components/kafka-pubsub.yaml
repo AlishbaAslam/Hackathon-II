@@ -1,0 +1,22 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "my-cluster-kafka-brokers:9092"  # Kafka cluster service address
+  - name: consumerGroup
+    value: "dapr-group"
+  - name: clientID
+    value: "dapr-kafka-client"
+  - name: authRequired
+    value: "false"  # Set to true for production with authentication
+  - name: initialOffset
+    value: "newest"
+  - name: maxMessageBytes
+    value: "1048576"
+  - name: version
+    value: "1.0.0"

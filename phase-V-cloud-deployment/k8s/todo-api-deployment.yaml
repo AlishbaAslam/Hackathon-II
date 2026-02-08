@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-api
+  labels:
+    app: todo-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-api
+  template:
+    metadata:
+      labels:
+        app: todo-api
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "todo-api"
+        dapr.io/app-port: "8000"
+        dapr.io/config: "dapr-config"
+        dapr.io/components: "kafka-pubsub,statestore,jobs"
+    spec:
+      containers:
+      - name: todo-api
+        image: todo-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:password@postgresql:5432/todo_db"
+        - name: KAFKA_BROKERS
+          value: "my-cluster-kafka-brokers:9092"
+        - name: DAPR_HTTP_ENDPOINT
+          value: "http://localhost:3500"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: secret-key
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-api-service
+spec:
+  selector:
+    app: todo-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

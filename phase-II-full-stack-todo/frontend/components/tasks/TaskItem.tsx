@@ -40,7 +40,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }: TaskItemP
             <span
               className={`text-[--text-primary] font-medium ${task.completed ? 'line-through text-[--text-muted]' : ''}`}
             >
-              {task.shortId && <span className="font-bold text-[--color-primary] mr-2">{task.shortId}.</span>}{task.title}
+              {task.title}
             </span>
             {task.description && (
               <p className={`mt-1 text-sm ${task.completed ? 'text-[--text-muted]' : 'text-[--text-secondary]'}`}>

@@ -1,0 +1,271 @@
+openapi: 3.0.3
+info:
+  title: Notification Service
+  description: Service that handles reminder scheduling and notifications
+  version: 1.0.0
+servers:
+  - url: http://localhost:8002
+    description: Local development server
+  - url: http://notification-service.default.svc.cluster.local
+    description: Kubernetes internal service
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /events/reminder-scheduled:
+    post:
+      summary: Handle reminder scheduling event
+      description: Called when a reminder needs to be scheduled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderScheduledEvent'
+      responses:
+        '200':
+          description: Reminder scheduled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Reminder scheduled successfully"
+                  job_id:
+                    type: string
+                    description: ID of the scheduled job
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+  /events/reminder-triggered:
+    post:
+      summary: Handle reminder triggered event
+      description: Called when a reminder is triggered to send notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderTriggeredEvent'
+      responses:
+        '200':
+          description: Notifications sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResult'
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+  /send-notification:
+    post:
+      summary: Send notification
+      description: Send a notification via multiple channels
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResult'
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    ReminderScheduledEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - taskId
+        - scheduledTime
+        - timestamp
+        - payload
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [reminder.scheduled]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user who owns the task
+        taskId:
+          type: integer
+          description: ID of the task with reminder
+        scheduledTime:
+          type: string
+          format: date-time
+          description: When the reminder should be triggered
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        payload:
+          $ref: '#/components/schemas/ReminderPayload'
+
+    ReminderTriggeredEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - taskId
+        - timestamp
+        - payload
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [reminder.triggered]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user who owns the task
+        taskId:
+          type: integer
+          description: ID of the task with reminder
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        payload:
+          $ref: '#/components/schemas/ReminderPayload'
+
+    ReminderPayload:
+      type: object
+      required:
+        - taskId
+        - userId
+        - scheduledTime
+        - notificationChannels
+      properties:
+        taskId:
+          type: integer
+          description: Task ID
+        userId:
+          type: string
+          description: User ID
+        scheduledTime:
+          type: string
+          format: date-time
+          description: Scheduled time for the reminder
+        title:
+          type: string
+          description: Task title
+        description:
+          type: string
+          description: Task description
+        notificationChannels:
+          type: array
+          items:
+            type: string
+            enum: [websocket, email, push]
+          description: Channels to send notification
+
+    NotificationRequest:
+      type: object
+      required:
+        - userId
+        - title
+        - message
+        - channels
+      properties:
+        userId:
+          type: string
+          description: User ID to send notification to
+        title:
+          type: string
+          description: Notification title
+        message:
+          type: string
+          description: Notification message content
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [websocket, email, push]
+          description: Channels to send notification
+        taskId:
+          type: integer
+          description: Associated task ID (optional)
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          description: Notification priority
+
+    NotificationResult:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Result message
+        sent_channels:
+          type: array
+          items:
+            type: string
+            enum: [websocket, email, push]
+          description: List of channels where notification was sent
+        failed_channels:
+          type: array
+          items:
+            type: string
+            enum: [websocket, email, push]
+          description: List of channels where notification failed
+        timestamp:
+          type: string
+          format: date-time
+          description: When the notification was processed
+
+    TaskDetails:
+      type: object
+      properties:
+        taskId:
+          type: integer
+          description: Task ID
+        title:
+          type: string
+          description: Task title
+        description:
+          type: string
+          description: Task description
+        dueAt:
+          type: string
+          format: date-time
+          description: Task due date

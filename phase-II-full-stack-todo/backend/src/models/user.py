@@ -18,8 +18,6 @@ class User(SQLModel, table=True):
         created_at: Account creation timestamp
         updated_at: Last update timestamp
         tasks: Relationship to user's tasks (one-to-many)
-        conversations: Relationship to user's conversations (one-to-many)
-        messages: Relationship to user's messages (one-to-many)
     """
     __tablename__ = "users"
 
@@ -30,7 +28,5 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.now, nullable=False)
 
-    # Relationships (not database columns)
+    # Relationship (not a database column)
     tasks: List["Task"] = Relationship(back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete"})
-    conversations: List["Conversation"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"})
-    messages: List["Message"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete"})

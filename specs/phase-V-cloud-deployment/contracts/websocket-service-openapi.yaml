@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: WebSocket Service
+  description: Service that handles real-time synchronization via WebSocket
+  version: 1.0.0
+servers:
+  - url: http://localhost:8004
+    description: Local development server
+  - url: http://websocket-service.default.svc.cluster.local
+    description: Kubernetes internal service
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /ws/{user_id}:
+    get:
+      summary: WebSocket connection endpoint
+      description: Establish WebSocket connection for real-time updates
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user's ID for authentication
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JWT authentication token
+      responses:
+        '101':
+          description: Switching to WebSocket protocol
+        '401':
+          description: Unauthorized
+
+  /api/{user_id}/broadcast:
+    post:
+      summary: Broadcast message to user's connections
+      description: Send a message to all WebSocket connections for a specific user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user's ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BroadcastMessage'
+      responses:
+        '200':
+          description: Message broadcasted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BroadcastResult'
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/{user_id}/connections:
+    get:
+      summary: Get active connections for user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user's ID
+      responses:
+        '200':
+          description: List of active connections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /events/task-updated:
+    post:
+      summary: Handle task update event
+      description: Called when a task is updated to broadcast to connected clients
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdatedEvent'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BroadcastResult'
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    BroadcastMessage:
+      type: object
+      required:
+        - type
+        - data
+      properties:
+        type:
+          type: string
+          enum: [task.created, task.updated, task.completed, task.deleted, notification.received, sync.request]
+          description: Type of message
+        data:
+          type: object
+          description: Message payload
+          properties:
+            taskId:
+              type: integer
+              description: Associated task ID
+            userId:
+              type: string
+              description: User ID
+            payload:
+              type: object
+              description: Additional data
+        timestamp:
+          type: string
+          format: date-time
+          description: When the message was created
+
+    TaskUpdatedEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - taskId
+        - timestamp
+        - payload
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [task.created, task.updated, task.completed, task.deleted, task.sync]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user who owns the task
+        taskId:
+          type: integer
+          description: ID of the task that was updated
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        payload:
+          type: object
+          description: Additional data about the task change
+          properties:
+            action:
+              type: string
+              enum: [created, updated, completed, deleted]
+            changes:
+              type: object
+              description: Field-level changes
+            task_snapshot:
+              $ref: '#/components/schemas/TaskSnapshot'
+
+    TaskSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Task ID
+        title:
+          type: string
+          description: Task title
+        description:
+          type: string
+          description: Task description
+        completed:
+          type: boolean
+          description: Completion status
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          description: Priority level
+        tags:
+          type: array
+          items:
+            type: string
+          description: Task tags
+        due_at:
+          type: string
+          format: date-time
+          description: Due date/time
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update time
+
+    BroadcastResult:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Result message
+        sent_to_connections:
+          type: integer
+          description: Number of connections that received the message
+        failed_connections:
+          type: integer
+          description: Number of connections that failed to receive the message
+        timestamp:
+          type: string
+          format: date-time
+          description: When the broadcast was processed
+
+    ConnectionList:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User ID
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectionInfo'
+        total_connections:
+          type: integer
+          description: Total number of active connections
+
+    ConnectionInfo:
+      type: object
+      properties:
+        connection_id:
+          type: string
+          description: Unique connection identifier
+        connected_at:
+          type: string
+          format: date-time
+          description: When the connection was established
+        client_info:
+          type: object
+          description: Information about the client
+          properties:
+            ip_address:
+              type: string
+              description: Client IP address
+            user_agent:
+              type: string
+              description: Client user agent string
+            device_type:
+              type: string
+              description: Device type (mobile, desktop, etc.)
+
+    WebSocketMessage:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Message type
+        data:
+          type: object
+          description: Message data payload
+        timestamp:
+          type: string
+          format: date-time
+          description: When the message was sent

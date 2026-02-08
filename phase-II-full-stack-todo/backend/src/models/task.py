@@ -32,12 +32,3 @@ class Task(SQLModel, table=True):
 
     # Relationship (not a database column)
     owner: Optional["User"] = Relationship(back_populates="tasks")
-
-
-class TaskUpdate(SQLModel):
-    """
-    Task update model for partial updates to task fields.
-    """
-    title: Optional[str] = None
-    description: Optional[str] = None
-    is_completed: Optional[bool] = None

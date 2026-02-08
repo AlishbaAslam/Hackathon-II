@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-recurring-task-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: recurring-task-service
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: recurring-task-service
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "recurring-task-service"
+        dapr.io/app-port: "{{ .Values.services.recurringTaskService.port }}"
+        dapr.io/config: "{{ .Values.dapr.config }}"
+        dapr.io/components: "kafka-pubsub,statestore"
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: recurring-task-service
+    spec:
+      containers:
+        - name: recurring-task-service
+          image: "{{ .Values.images.recurringTaskService.repository }}:{{ .Values.images.recurringTaskService.tag }}"
+          imagePullPolicy: {{ .Values.images.recurringTaskService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.recurringTaskService.port }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.env.databaseUrl | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ .Values.kafka.brokers | quote }}
+            - name: CONSUMER_GROUP
+              value: {{ .Values.kafka.consumerGroup | quote }}
+          resources:
+            {{- toYaml .Values.resources.recurringTaskService | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-recurring-task-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: recurring-task-service
+spec:
+  type: {{ .Values.services.recurringTaskService.type }}
+  ports:
+    - port: {{ .Values.services.recurringTaskService.port }}
+      targetPort: {{ .Values.services.recurringTaskService.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: recurring-task-service

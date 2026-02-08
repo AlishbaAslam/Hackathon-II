@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-notification-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: notification-service
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: notification-service
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "notification-service"
+        dapr.io/app-port: "{{ .Values.services.notificationService.port }}"
+        dapr.io/config: "{{ .Values.dapr.config }}"
+        dapr.io/components: "kafka-pubsub,jobs"
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: "{{ .Values.images.notificationService.repository }}:{{ .Values.images.notificationService.tag }}"
+          imagePullPolicy: {{ .Values.images.notificationService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.notificationService.port }}
+          env:
+            - name: KAFKA_BROKERS
+              value: {{ .Values.kafka.brokers | quote }}
+            - name: CONSUMER_GROUP
+              value: {{ .Values.kafka.consumerGroup | quote }}
+          resources:
+            {{- toYaml .Values.resources.notificationService | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-notification-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: notification-service
+spec:
+  type: {{ .Values.services.notificationService.type }}
+  ports:
+    - port: {{ .Values.services.notificationService.port }}
+      targetPort: {{ .Values.services.notificationService.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: notification-service

@@ -336,3 +336,25 @@ Before deploying your chatbot frontend, you must configure OpenAI's domain allow
 NEXT_PUBLIC_OPENAI_DOMAIN_KEY=your-domain-key-here
 
 Note: The hosted ChatKit option only works after adding the correct domains under Security → Domain Allowlist. Local development (localhost) typically works without this configuration.
+
+## Custom Agents
+
+### Todo API Agent
+Description: Core backend agent using FastAPI that handles all task CRUD (create, read, update, delete, complete) operations. Publishes events to Kafka topics via Dapr Pub/Sub: task-events, reminders, task-updates. Uses Dapr for Pub/Sub, State, Service Invocation, and Secrets. Task model includes recurring, due_at, remind_at, priority, and tags fields.
+When to use: When implementing core task management functionality, event publishing, or when you need a robust backend service that integrates with Dapr for distributed capabilities.
+
+### Recurring Task Agent
+Description: An event-driven agent that listens to the "task-events" topic via Dapr Pub/Sub. When a recurring task is marked as completed, this agent automatically creates the next occurrence of the task and publishes the new task back to the "task-events" topic for further processing.
+When to use: When implementing recurring task functionality where completed tasks need to automatically generate future instances based on recurrence rules.
+
+### Notification / Reminder Agent
+Description: A Dapr-based agent that listens to the "reminders" topic via Dapr Pub/Sub. It schedules exact-time reminders using Dapr Jobs API and sends notifications (push, email, console) at the designated trigger time to users.
+When to use: When implementing reminder systems, scheduled notifications, or time-based alerts that need to be delivered reliably at specific times.
+
+### Audit / Logging Agent
+Description: An audit trail agent that listens to the "task-events" topic via Dapr Pub/Sub. It captures and stores a complete log/history of every task operation including timestamps and user information to a database or file storage for compliance and monitoring purposes.
+When to use: When implementing audit logging, compliance tracking, or when you need to maintain a complete history of all task operations for debugging and accountability.
+
+### Real-time Sync Agent (WebSocket)
+Description: A real-time synchronization agent that listens to the "task-updates" topic via Dapr Pub/Sub. It broadcasts task changes to all connected clients in real-time using WebSocket connections, ensuring all users see updates immediately.
+When to use: When implementing real-time collaboration features, live updates, or when users need to see task changes made by others instantly across multiple connected clients.

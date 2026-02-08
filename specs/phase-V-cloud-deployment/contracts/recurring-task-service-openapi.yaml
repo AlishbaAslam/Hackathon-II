@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Recurring Task Service
+  description: Service that handles recurring task generation and management
+  version: 1.0.0
+servers:
+  - url: http://localhost:8001
+    description: Local development server
+  - url: http://recurring-task-service.default.svc.cluster.local
+    description: Kubernetes internal service
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /events/task-completed:
+    post:
+      summary: Handle task completion event
+      description: Called when a recurring task is marked as complete to generate next occurrence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletedEvent'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCreatedResult'
+        '204':
+          description: No recurring task to process
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+  /events/task-created:
+    post:
+      summary: Handle new recurring task creation
+      description: Called when a new recurring task is created to set up tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreatedEvent'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Recurring task tracking initiated"
+        '400':
+          description: Invalid event data
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    TaskCompletedEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - taskId
+        - timestamp
+        - payload
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [task.completed]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user who owns the task
+        taskId:
+          type: integer
+          description: ID of the completed task
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        payload:
+          $ref: '#/components/schemas/TaskPayload'
+
+    TaskCreatedEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - userId
+        - taskId
+        - timestamp
+        - payload
+      properties:
+        eventId:
+          type: string
+          description: Unique identifier for the event
+        eventType:
+          type: string
+          enum: [task.created]
+          description: Type of event
+        userId:
+          type: string
+          description: ID of the user who owns the task
+        taskId:
+          type: integer
+          description: ID of the created task
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        payload:
+          $ref: '#/components/schemas/TaskPayload'
+
+    TaskPayload:
+      type: object
+      required:
+        - id
+        - user_id
+        - title
+        - completed
+        - recurrence_pattern
+      properties:
+        id:
+          type: integer
+          description: Task ID
+        user_id:
+          type: string
+          description: User ID
+        title:
+          type: string
+          description: Task title
+        description:
+          type: string
+          description: Task description
+        completed:
+          type: boolean
+          description: Whether the task is completed
+        due_at:
+          type: string
+          format: date-time
+          description: Optional due date
+        remind_at:
+          type: string
+          format: date-time
+          description: Optional reminder time
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          description: Task priority
+        tags:
+          type: array
+          items:
+            type: string
+          description: Task tags
+        recurrence_pattern:
+          $ref: '#/components/schemas/RecurrencePattern'
+        parent_task_id:
+          type: integer
+          description: Parent task ID if this is an occurrence
+
+    RecurrencePattern:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [none, daily, weekly, monthly, yearly]
+          description: Recurrence type
+        interval:
+          type: integer
+          minimum: 1
+          description: Interval multiplier
+        end_condition:
+          type: object
+          properties:
+            after_occurrences:
+              type: integer
+              minimum: 1
+              description: Number of occurrences before stopping
+            until_date:
+              type: string
+              format: date-time
+              description: Date when recurrence stops
+
+    TaskCreatedResult:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Result message
+        new_task_id:
+          type: integer
+          description: ID of the newly created task (if any)
+        recurrence_count:
+          type: integer
+          description: How many occurrences left in the series
+        next_due_date:
+          type: string
+          format: date-time
+          description: When the next occurrence is due

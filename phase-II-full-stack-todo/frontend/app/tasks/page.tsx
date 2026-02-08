@@ -129,12 +129,6 @@ export default function TasksPage() {
     return true; // 'all'
   });
 
-  // Create a mapping of task IDs to consistent short IDs based on original order
-  const taskShortIdMap = tasks.reduce((map, task, index) => {
-    map[task.id] = index + 1;
-    return map;
-  }, {} as Record<string, number>);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[--background-gradient-start] to-[--background-gradient-end] py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -326,7 +320,7 @@ export default function TasksPage() {
                               ? 'text-[--text-muted] line-through'
                               : 'text-[--text-primary]'
                           }`}>
-                            {taskShortIdMap[task.id] && <span className="font-bold text-[--color-primary] mr-2">{taskShortIdMap[task.id]}.</span>}{task.title}
+                            {task.title}
                           </h3>
                           {task.description && (
                             <p className={`mt-1 text-sm ${

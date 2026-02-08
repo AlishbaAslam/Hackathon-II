@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-backend
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: backend
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: backend
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "todo-backend"
+        dapr.io/app-port: "{{ .Values.services.backend.port }}"
+        dapr.io/config: "{{ .Values.dapr.config }}"
+        dapr.io/components: "kafka-pubsub,statestore,jobs"
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.images.backend.repository }}:{{ .Values.images.backend.tag }}"
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.backend.port }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.env.databaseUrl | quote }}
+            - name: SECRET_KEY
+              value: {{ .Values.env.secretKey | quote }}
+            - name: ALGORITHM
+              value: {{ .Values.env.algorithm | quote }}
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              value: {{ .Values.env.accessTokenExpireMinutes | quote }}
+            - name: CORS_ORIGINS
+              value: {{ .Values.env.corsOrigins | quote }}
+          resources:
+            {{- toYaml .Values.resources.backend | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-backend
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: backend
+spec:
+  type: {{ .Values.services.backend.type }}
+  ports:
+    - port: {{ .Values.services.backend.port }}
+      targetPort: {{ .Values.services.backend.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: backend

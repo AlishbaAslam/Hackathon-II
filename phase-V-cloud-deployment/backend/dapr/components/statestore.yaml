@@ -1,0 +1,16 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+  - name: connectionString
+    secretKeyRef:
+      name: postgresql-connection-string
+      key: connectionString
+  - name: actorStateStore
+    value: "true"
+  - name: concurrency
+    value: "first-write"

@@ -16,7 +16,6 @@ greenlet
 h11
 httptools
 idna
-openai>=1.0.0
 passlib
 psycopg2-binary
 pyasn1

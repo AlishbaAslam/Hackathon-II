@@ -5,12 +5,7 @@ from typing import AsyncGenerator
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from contextlib import contextmanager
 from src.config import settings
-
-# Import all models to register them with SQLModel metadata
-from src.models import User, Task, Conversation, Message
 
 # Create async engine
 # Handle different database types with appropriate connection arguments
@@ -40,40 +35,6 @@ async_session = sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False
 )
-
-# Create sync engine and session factory for sync operations
-if "postgresql" in settings.DATABASE_URL.lower():
-    # For PostgreSQL with sync driver
-    sync_database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://").replace("postgresql://", "postgresql://")
-    sync_connect_args = {}
-elif "sqlite" in settings.DATABASE_URL.lower():
-    sync_connect_args = {"check_same_thread": False}
-else:
-    sync_connect_args = {}
-
-sync_engine = create_engine(
-    settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://"),
-    echo=settings.DEBUG,
-    connect_args=sync_connect_args
-)
-
-sync_session = sessionmaker(
-    sync_engine,
-    expire_on_commit=False
-)
-
-
-@contextmanager
-def get_session():
-    """
-    Context manager that provides a synchronous database session.
-    Yields a sync session and ensures it's closed after use.
-    """
-    session = sync_session()
-    try:
-        yield session
-    finally:
-        session.close()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """

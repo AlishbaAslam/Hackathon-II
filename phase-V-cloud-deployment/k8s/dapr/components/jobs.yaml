@@ -1,0 +1,12 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: jobs
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  - name: route
+    value: "/process-reminder"
+  - name: schedule
+    value: "0 * * * *"  # Every hour - will be overridden by individual reminder scheduling

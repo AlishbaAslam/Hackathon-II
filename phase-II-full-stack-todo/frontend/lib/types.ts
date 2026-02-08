@@ -10,7 +10,6 @@ export interface User {
 // Task type definition
 export interface Task {
   id: string;
-  shortId?: number;  // Optional short ID for UI display (1-based index)
   title: string;
   description?: string;
   completed: boolean;

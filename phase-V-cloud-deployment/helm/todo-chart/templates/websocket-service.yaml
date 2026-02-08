@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-websocket-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: websocket-service
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "todo-chart.selectorLabels" . | nindent 6 }}
+      app: websocket-service
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "websocket-service"
+        dapr.io/app-port: "{{ .Values.services.websocketService.port }}"
+        dapr.io/config: "{{ .Values.dapr.config }}"
+        dapr.io/components: "kafka-pubsub,statestore"
+      labels:
+        {{- include "todo-chart.selectorLabels" . | nindent 8 }}
+        app: websocket-service
+    spec:
+      containers:
+        - name: websocket-service
+          image: "{{ .Values.images.websocketService.repository }}:{{ .Values.images.websocketService.tag }}"
+          imagePullPolicy: {{ .Values.images.websocketService.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.websocketService.port }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.env.databaseUrl | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ .Values.kafka.brokers | quote }}
+            - name: CONSUMER_GROUP
+              value: {{ .Values.kafka.consumerGroup | quote }}
+          resources:
+            {{- toYaml .Values.resources.websocketService | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-chart.fullname" . }}-websocket-service
+  labels:
+    {{- include "todo-chart.labels" . | nindent 4 }}
+    app: websocket-service
+spec:
+  type: {{ .Values.services.websocketService.type }}
+  ports:
+    - port: {{ .Values.services.websocketService.port }}
+      targetPort: {{ .Values.services.websocketService.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-chart.selectorLabels" . | nindent 4 }}
+    app: websocket-service
